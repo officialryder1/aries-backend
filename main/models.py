@@ -53,7 +53,7 @@ class Player_rank(models.Model):
 class Player(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     character = models.ForeignKey(Character, on_delete=models.CASCADE)
-    card = models.ManyToManyField(Card, related_name='player_cards', blank=True, null=True)
+    card = models.ManyToManyField(Card, related_name='player_cards', blank=True)
 
     hp = models.PositiveIntegerField(default=100)
     mana = models.PositiveIntegerField(default=100)

@@ -1,4 +1,3 @@
-# serializers.py
 
 from rest_framework import serializers
 from django.contrib.auth.models import User
@@ -33,7 +32,7 @@ class NoteSerializer(serializers.ModelSerializer):
 class PlayerSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
     character_name = serializers.SerializerMethodField()
-    card = serializers.PrimaryKeyRelatedField(queryset=Card.objects.all(), many=True)
+    card = serializers.PrimaryKeyRelatedField(queryset=Card.objects.all(), many=True, required=False)
 
     class Meta:
         model = Player
@@ -54,19 +53,6 @@ class CardSerializer(serializers.ModelSerializer):
     class Meta:
         model = Card
         fields = '__all__'
-
-# class PlayerCardSerializer(serializers.ModelSerializer):
-#     user_name = serializers.SerializerMethodField()
-#     card_name = serializers.SerializerMethodField()
-#     class Meta:
-#         model = Player_card
-#         fields = ['user','user_name', 'card', 'card_name']
-    
-#     def get_user_name(self, obj):
-#         return obj.user.username
-    
-#     def get_card_name(self, obj):
-#         return obj.card.name
 
 class RaritySerializer(serializers.ModelSerializer):
     class Meta:
