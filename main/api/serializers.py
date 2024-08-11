@@ -1,7 +1,7 @@
 
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from ..models import Note, Player, Card, Character, Rarity, Player_rank
+from ..models import Note, Player, Card, Character, Rarity, Player_rank, MatchResult, Match, PlayerCard, MatchRequest
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -63,3 +63,21 @@ class PlayerRankSerializer(serializers.ModelSerializer):
     class Meta:
         model = Player_rank
         fields = '__all__'
+
+class MatchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Match
+        fields = '__all__'
+
+class MatchResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MatchResult
+        fields = '__all__'
+
+class PlayerCardSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PlayerCard
+        fields = '__all__'
+
+class MatchRequestSerializer(serializers.ModelSerializer):
+    pass

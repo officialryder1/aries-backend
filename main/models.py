@@ -62,5 +62,47 @@ class Player(models.Model):
         return str(self.user)
 
 
+# Match db
+
+class Match(models.Model):
+    player_one = models.ForeignKey(User, on_delete=models.CASCADE, related_name='player_one')
+    player_two = models.ForeignKey(User, on_delete=models.CASCADE, related_name="player_two")
+    status = models.CharField(max_length=20, choices=[(
+        'waiting', 'Waiting'), ('ongoing', 'Ongoing'), ('finished', 'Finished')], default= 'waiting')
+    start_time = models.DateTimeField(auto_now_add=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    winner = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='match_won')
+
+    def __str__(self):
+        return f"Match between {self.player_one.username} and {self.player_two.username}"
 
 
+
+class PlayerCard(models.Model):
+    player = models.ForeignKey(User, on_delete=models.CASCADE, related_name='player_cards')
+    card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name="player_card")
+    match = models.ForeignKey(Match, on_delete=models.CASCADE, related_name="player_card")
+    in_hand = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.player.username}'s {self.card.name} in match {self.match.id}"
+    
+class MatchResult(models.Model):
+    match = models.OneToOneField(Match, on_delete=models.CASCADE, related_name="result")
+    winner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="won_match")
+    loser = models.ForeignKey(User, on_delete=models.CASCADE, related_name = "lost_match")
+    winning_cards = models.ManyToManyField(Card, related_name='winning_matches')
+
+    def __str__(self):
+        return f"Result of match {self.match.id}"
+    
+
+class MatchRequest(models.Model):
+    requester = models.ForeignKey(User, on_delete=models.CASCADE, related_name="requested_matches")
+    requestee = models.ForeignKey(User, on_delete=models.CASCADE, related_name="recieved_matches", null=True, blank=True)
+    status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('accepted', 'Accepted'), ('declined', 'Declined')], default ="pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Request was created by {self.requester} on {self.created_at}"
+    

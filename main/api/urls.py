@@ -28,7 +28,10 @@ urlpatterns = [
     path('get_player', views.get_player),
     path('get_card/<int:pk>', views.get_card),
     path('update_player', views.update_player_card),
-    path('get_character/<int:pk>', views.get_character)
+    path('get_character/<int:pk>', views.get_character),
     
-   
+    # Match Url
+    path('game/match', views.match),
+    path('game/match_request', views.findMatch),
+    path('game/update_match', views.UpdateMatch)
 ]

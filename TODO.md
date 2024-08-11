@@ -7,13 +7,13 @@ Project Description
 ### Todo
 
 - [ ] try finishing landing page  
-- [ ] create db for match  
-- [ ] Implemet player in db  
 - [ ]   
 
 ### In Progress
 
+- [ ] Implemet player in db  
 
 ### Done ✓
 
+- [x] create db for match  
 

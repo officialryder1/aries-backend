@@ -3,8 +3,8 @@ from django.http import JsonResponse  # noqa: F401
 from django.contrib.auth.models import User
 
 # models
-from ..models import Note, Character, Player, Player_rank, Card, Rarity
-from .serializers import UserSerializer, RegisterSerializer, NoteSerializer, CardSerializer, CharacterSerializer, PlayerSerializer
+from ..models import Note, Character, Player, Player_rank, Card, Rarity, Match, MatchResult, PlayerCard, MatchRequest
+from .serializers import UserSerializer, RegisterSerializer, NoteSerializer, CardSerializer, CharacterSerializer, PlayerSerializer, MatchSerializer, MatchResultSerializer, PlayerCardSerializer, MatchRequestSerializer
 
 # restFrameWork 
 from rest_framework.response import Response
@@ -197,4 +197,29 @@ def get_character(request, pk):
         return Response({"error": "Character not found"}, status=status.HTTP_400_BAD_REQUEST)
     
 
+@api_view(['GET', 'POST'])
+def match(request):
+    if request.method == 'GET':
+        match = Match.objects.all()
+        serializer = MatchSerializer(match, many=True)
+        return Response(serializer.data)
+    if request.method == 'POST':
+        pass
 
+@api_view(['GET', 'POST'])
+def findMatch(request):
+    user = request.GET.get('user_id')
+    user_id = User.objects.get(pk=user)
+    match_request = MatchRequest.objects.create(requester=user_id)
+    match_request.save()
+    return Response({"message": "Match request created, waiting for a match"})
+
+@api_view(['POST'])
+def UpdateMatch(request):
+    user = request.GET.get('user_id')
+    
+    try:
+       match = MatchRequest.objects.get(requester=user)
+    except Match.DoesNotExist:
+        return Response({"error": "Match not found"}, status=status.HTTP_400_BAD_REQUEST)
+     
