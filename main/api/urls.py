@@ -33,5 +33,7 @@ urlpatterns = [
     # Match Url
     path('game/match', views.match),
     path('game/match_request', views.findMatch),
-    path('game/update_match', views.UpdateMatch)
+    path('game/find_match', views.FindMatch),
+    path('game/accept_match/', views.AcceptMatch)
+
 ]

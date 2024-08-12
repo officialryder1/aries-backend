@@ -43,6 +43,15 @@ class PlayerSerializer(serializers.ModelSerializer):
     
     def get_character_name(self, obj):
         return obj.character.name
+    
+class MatchRequestSerializer(serializers.ModelSerializer):
+    requester_name = serializers.SerializerMethodField()
+    class Meta:
+        model = MatchRequest
+        fields = ['id','status', 'created_at', 'requester', 'requester_name']
+
+    def get_requester_name(self, obj):
+        return obj.requester.username
 
 class CharacterSerializer(serializers.ModelSerializer):
     class Meta:
@@ -79,5 +88,3 @@ class PlayerCardSerializer(serializers.ModelSerializer):
         model = PlayerCard
         fields = '__all__'
 
-class MatchRequestSerializer(serializers.ModelSerializer):
-    pass

@@ -212,14 +212,42 @@ def findMatch(request):
     user_id = User.objects.get(pk=user)
     match_request = MatchRequest.objects.create(requester=user_id)
     match_request.save()
-    return Response({"message": "Match request created, waiting for a match"})
+    return Response({"message": "Searching for a match..."})
 
-@api_view(['POST'])
-def UpdateMatch(request):
+@api_view(['POST', 'GET'])
+def FindMatch(request):
     user = request.GET.get('user_id')
-    
+
+    match_request = MatchRequest.objects.filter(status='pending').exclude(requestee=user)
+    serializer = MatchRequestSerializer(match_request, many=True)
+
+    return Response(serializer.data)
+
+@api_view(['GET', 'POST'])
+def AcceptMatch(request):
+    user = request.GET.get('user_id')
+
+     # Validate and retrieve the player
     try:
-       match = MatchRequest.objects.get(requester=user)
-    except Match.DoesNotExist:
-        return Response({"error": "Match not found"}, status=status.HTTP_400_BAD_REQUEST)
-     
+        user = Player.objects.get(user=user)
+    except Player.DoesNotExist:
+        return Response({"error": "Player not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Get match ID(s) from the request
+    # it has to be a getlist
+    # the url should look like this  http://127.0.0.1:8000/api/game/accept_match/?user_id=1&match=30
+
+    match = request.GET.getlist('match')
+    if not match:
+        return Response({'error': "match does not exist"}, status=status.HTTP_404_NOT_FOUND)
+    
+     # Filter the MatchRequest objects by the IDs provided
+    match_object = MatchRequest.objects.filter(id__in = match)
+    if not match_object.exists():
+        return Response({'error': "No matching matches found"}, status=status.HTTP_404_NOT_FOUND)
+
+    # Update the status of the matches
+    match_object.update(status='accepted')
+    
+    return Response({'success': f'{len(match_object)} match(es) approved.'})
+
