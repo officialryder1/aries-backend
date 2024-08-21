@@ -48,7 +48,7 @@ class MatchRequestSerializer(serializers.ModelSerializer):
     requester_name = serializers.SerializerMethodField()
     class Meta:
         model = MatchRequest
-        fields = ['id','status', 'created_at', 'requester', 'requester_name']
+        fields = ['id','status', 'created_at', 'requestee', 'requester', 'requester_name']
 
     def get_requester_name(self, obj):
         return obj.requester.username
@@ -74,9 +74,18 @@ class PlayerRankSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class MatchSerializer(serializers.ModelSerializer):
+    playerone = serializers.SerializerMethodField()
+    playertwo = serializers.SerializerMethodField()
+    
     class Meta:
         model = Match
-        fields = '__all__'
+        fields = ['player_one','playerone', 'player_two', 'playertwo', 'status', 'end_time', 'winner']
+
+    def get_playerone(self, obj):
+        return obj.player_one.username
+
+    def get_playertwo(self, obj):
+        return obj.player_two.username
 
 class MatchResultSerializer(serializers.ModelSerializer):
     class Meta:
