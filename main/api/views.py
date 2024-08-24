@@ -231,7 +231,7 @@ def FindMatch(request):
     
     match_request = MatchRequest.objects.filter(status='pending').exclude(requestee=user)
     serializer = MatchRequestSerializer(match_request, many=True)
-
+    
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET', 'POST'])
@@ -252,7 +252,6 @@ def AcceptMatch(request, pk):
             return Response({"error": "Match request not found or already accepted"}, status=status.HTTP_404_NOT_FOUND)
         
         match_request.requestee = player.user
-
         match_request.status = "accepted"
         match_request.save()
 
@@ -261,7 +260,9 @@ def AcceptMatch(request, pk):
         pusher_client.trigger('match-channel', 'match-accepted', {
             'message': f'User {user_id} has accepted the match!',
             'match_id': match.id,
-            'redirect_url': f'/game/{match.id}'
+            'redirect_url': f'/game/{match.id}',
+            'player_one_id': match.player_one.id,
+            'player_two_id': match.player_two.id,
         })
         # Create the match instance
         match_url = reverse('matchDetail', kwargs={'pk': match.id})
