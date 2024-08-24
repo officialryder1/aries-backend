@@ -197,3 +197,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS_ALLOWED_ORIGINS = "http://localhost:5173/"
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# PUSHER_APP_ID='1853747',
+# PUSHER_KEY ='2d9060f8f7ec2034a519',
+# PUSHER_SECRET='2b5cc1aaccbb1597e66f',
+# PUSHER_CLUSTER='eu',

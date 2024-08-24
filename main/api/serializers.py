@@ -79,7 +79,7 @@ class MatchSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Match
-        fields = ['player_one','playerone', 'player_two', 'playertwo', 'status', 'end_time', 'winner']
+        fields = ['id','player_one','playerone', 'player_two', 'playertwo', 'status', 'end_time', 'winner']
 
     def get_playerone(self, obj):
         return obj.player_one.username

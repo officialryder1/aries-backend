@@ -3,6 +3,10 @@ from django.http import JsonResponse  # noqa: F401
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.db.models import Q
+
+# third parties
+from .pusher import pusher_client
 # models
 from ..models import Note, Character, Player, Player_rank, Card, Rarity, Match, MatchResult, PlayerCard, MatchRequest  # noqa: F401
 from .serializers import UserSerializer, RegisterSerializer, NoteSerializer, CardSerializer, CharacterSerializer, PlayerSerializer, MatchSerializer, MatchResultSerializer, PlayerCardSerializer, MatchRequestSerializer
@@ -212,7 +216,12 @@ def requestMatch(request):
     user = request.GET.get('user_id')
     user_id = User.objects.get(pk=user)
     match_request = MatchRequest.objects.create(requester=user_id)
+
     match_request.save()
+    pusher_client.trigger('match-channel', 'new-match', {
+        'requester_name': match_request.requester.username,
+        'match_request_id': match_request.id
+    })
     return Response({"message": "Searching for a match..."})
 
 @api_view(['POST', 'GET'])
@@ -249,10 +258,14 @@ def AcceptMatch(request, pk):
 
         match = Match.objects.create(player_one=match_request.requester, player_two=player.user)
 
-
+        pusher_client.trigger('match-channel', 'match-accepted', {
+            'message': f'User {user_id} has accepted the match!',
+            'match_id': match.id,
+            'redirect_url': f'/game/{match.id}'
+        })
         # Create the match instance
         match_url = reverse('matchDetail', kwargs={'pk': match.id})
-        print(match.id)
+       
         return Response({"message": "Match accepted", "redirect_url": match_url}, status=status.HTTP_200_OK)
        
 @api_view(['GET'])
@@ -262,3 +275,46 @@ def matchDetail(request, pk):
     serializer = MatchSerializer(match)
 
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def match_status(request):
+    user_id = request.GET.get('user_id')
+
+    # Validate and retrieve the player
+    try:
+        player = Player.objects.get(user=user_id)
+    except Player.DoesNotExist:
+        return Response({"error": "Player not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Retrieve the match where the player is involved
+    match = Match.objects.filter(player_one=player.user).first() or Match.objects.filter(player_two=player.user).first()
+
+    if not match:
+        return Response({"status": "No match found"}, status=status.HTTP_200_OK)
+
+    # Serialize the match details
+    serializer = MatchSerializer(match)
+    return Response({"status": match.status, "match": serializer.data}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def pending_matches(request):
+    user_id = request.GET.get('user_id')
+
+    # Validate and retrieve the player
+    try:
+        player = Player.objects.get(user=user_id)
+    except Player.DoesNotExist:
+        return Response({"error": "Player not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    # Find all pending matches for this player
+    pending_matches = Match.objects.filter(
+        (Q(player_one=player.user) | Q(player_two=player.user)),
+        status="waiting"
+    )
+
+    if not pending_matches.exists():
+        return Response({"status": "No pending matches found"}, status=status.HTTP_200_OK)
+
+    # Serialize the pending matches
+    serializer = MatchSerializer(pending_matches, many=True)
+    return Response({"pending_matches": serializer.data}, status=status.HTTP_200_OK)
