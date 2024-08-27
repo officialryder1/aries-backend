@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+from decouple import config
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -202,3 +203,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 # PUSHER_KEY ='2d9060f8f7ec2034a519',
 # PUSHER_SECRET='2b5cc1aaccbb1597e66f',
 # PUSHER_CLUSTER='eu',
+
+PUSHER_APP_ID = config('PUSHER_APP_ID')
+PUSHER_KEY = config('PUSHER_KEY')
+PUSHER_SECRET = config('PUSHER_SECRET')
+PUSHER_CLUSTER = config('PUSHER_CLUSTER')

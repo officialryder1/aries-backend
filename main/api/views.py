@@ -130,6 +130,7 @@ def character(request):
         serializer = CharacterSerializer(character, many=True)
         return Response(serializer.data)
 
+# get all the cards and listen for a post event to add card
 @api_view(['POST', 'GET'])
 def card(request):
     if request.method == 'GET':
@@ -164,11 +165,14 @@ def get_player(request):
 
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+# Get a single card 
 @api_view(['GET'])
 def get_card(request, pk ):
     try:
         card = Card.objects.get(pk=pk)
         serializer = CardSerializer(card)
+        
         return Response(serializer.data)
     except Card.DoesNotExist:
         return Response({'error': "Card not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -319,3 +323,14 @@ def pending_matches(request):
     # Serialize the pending matches
     serializer = MatchSerializer(pending_matches, many=True)
     return Response({"pending_matches": serializer.data}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+def trigger_card_event(request):
+    card = request.data.get('card')
+    user = request.data.get('user')
+
+    pusher_client.trigger('match-channel', 'get-card', {
+        'card': card,
+        'user': user
+    })
+    return Response({'status': 'success'})

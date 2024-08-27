@@ -37,5 +37,6 @@ urlpatterns = [
     path('game/accept_match/<int:pk>/', views.AcceptMatch),
     path('match/<int:pk>', views.matchDetail, name='matchDetail'),
     path('game/match_status/', views.match_status, name="match_status"),
-    path('game/pending_matches/', views.pending_matches, name='pending_matches')
+    path('game/pending_matches/', views.pending_matches, name='pending_matches'),
+    path('trigger_card', views.trigger_card_event)
 ]
