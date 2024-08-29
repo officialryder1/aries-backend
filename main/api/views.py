@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.db.models import Q
+from django.views.decorators.http import require_POST
 
 # third parties
 from .pusher import pusher_client
@@ -328,9 +329,88 @@ def pending_matches(request):
 def trigger_card_event(request):
     card = request.data.get('card')
     user = request.data.get('user')
+    match = request.data.get('match')
+
+    match = get_object_or_404(Match, id=match)
+    playerOne = match.player_one
+    playerTwo = match.player_two
+
+    playerOneDetail = get_object_or_404(Player, user=playerOne)
+    playerTwoDetail =get_object_or_404(Player, user=playerTwo)
+
+    cards = get_object_or_404(Card, id=card)
+    serializer = CardSerializer(cards)
+    player_attack = cards.attack_point
+    card_mana = cards.mana_point
+    match_started = True
+    winner = []
+
+
+
+    # logic
+    if match_started:
+        if user == playerOneDetail.user.username:
+            if playerOneDetail.hp > 0:
+                if playerOneDetail.mana > 0:
+                    if playerTwoDetail.hp > 0:
+                        playerTwoDetail.hp -= player_attack
+                        playerOneDetail.mana -= card_mana
+                        playerTwoDetail.save()
+                        playerOneDetail.save()
+                    else:
+                        playerOneDetail.mana = 100
+                        playerOneDetail.hp = 100
+                        playerOneDetail.save()
+
+                        playerTwoDetail.mana = 100
+                        playerTwoDetail.hp = 100
+                        playerTwoDetail.save()
+
+                        return Response({'message': "You win"})
+                else:
+                    return Response({'message': "Out of mana"})
+            else:
+                match = winner.push(playerTwoDetail.user.username)
+                return Response({"message": f"You where defected by{playerTwoDetail.user.user} try again ...."})
+        elif user == playerTwoDetail.user.username:
+            if playerTwoDetail.hp > 0:
+                if playerTwoDetail.mana > 0:
+                    if playerOneDetail.hp > 0:
+                        playerOneDetail.hp -= player_attack
+                        playerTwoDetail.mana -= card_mana
+                        playerTwoDetail.save()
+                        playerOneDetail.save()
+                    else:
+                        playerTwoDetail.mana = 100
+                        playerTwoDetail.hp = 100
+                        playerTwoDetail.save()
+
+                        playerOneDetail.mana = 100
+                        playerOneDetail.hp = 100
+                        playerOneDetail.save()
+                        return Response({'message': "You win"})
+                else:
+                    return Response({'message': "Out of mana"})
+            else:
+                match = winner.push(playerOneDetail.user.username)
+                return Response({"message": f"You where defected by{playerOneDetail.user.user} try again ...."})
+        else:
+            return Response({'status': 'error', 'message': 'Invalid user'}, status=400)
+    else:
+        print(winner)
+    
+    
 
     pusher_client.trigger('match-channel', 'get-card', {
-        'card': card,
-        'user': user
+        'card': serializer.data,
+        'user': user,
+        'player_one_health': playerOneDetail.hp,
+        'player_two_health':playerTwoDetail.hp,
+        'player_one_mana': playerOneDetail.mana,
+        'player_two_mana': playerTwoDetail.mana
     })
-    return Response({'status': 'success'})
+    return Response({'status': 'success', 'player_two_health':playerTwoDetail.hp,
+     'player_one':playerOneDetail.hp, 
+     'player_mana': playerOneDetail.mana, 'player_two_mana': playerTwoDetail.mana, 'card':serializer.data})
+
+
