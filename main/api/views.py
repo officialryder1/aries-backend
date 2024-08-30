@@ -430,7 +430,7 @@ def trigger_card_event(request):
     })
     return Response({'status': 'success', 'player_two_health':playerTwoDetail.hp,
      'player_one':playerOneDetail.hp, 
-     'player_mana': playerOneDetail.mana, 'player_two_mana': playerTwoDetail.mana, 'card':serializer.data})
+     'player_one_mana': playerOneDetail.mana, 'player_two_mana': playerTwoDetail.mana, 'card':serializer.data})
 
 
 # TODO clean the game logic more and edit the frontend with this update
