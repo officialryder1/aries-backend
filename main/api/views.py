@@ -338,12 +338,18 @@ def trigger_card_event(request):
     playerOneDetail = get_object_or_404(Player, user=playerOne)
     playerTwoDetail =get_object_or_404(Player, user=playerTwo)
 
+    user_one=get_object_or_404(User, username=playerOneDetail.user.username)
+    user_two=get_object_or_404(User, username=playerTwoDetail.user.username)
+
+    
+
+
     cards = get_object_or_404(Card, id=card)
     serializer = CardSerializer(cards)
     player_attack = cards.attack_point
     card_mana = cards.mana_point
     match_started = True
-    winner = []
+    
 
 
 
@@ -365,12 +371,17 @@ def trigger_card_event(request):
                         playerTwoDetail.mana = 100
                         playerTwoDetail.hp = 100
                         playerTwoDetail.save()
+                        
+                        winner_match = MatchResult.objects.create(match=match, winner=user_one, losere=user_two)
 
-                        return Response({'message': "You win"})
+                        winner_match.save()
+                        return Response({'message': f"You win {playerOneDetail.user}"} )
                 else:
                     return Response({'message': "Out of mana"})
             else:
-                match = winner.push(playerTwoDetail.user.username)
+                winner_match = MatchResult.objects.create(match=match, winner=user_two, loser=user_one)
+
+                winner_match.save()
                 return Response({"message": f"You where defected by{playerTwoDetail.user.user} try again ...."})
         elif user == playerTwoDetail.user.username:
             if playerTwoDetail.hp > 0:
@@ -388,16 +399,24 @@ def trigger_card_event(request):
                         playerOneDetail.mana = 100
                         playerOneDetail.hp = 100
                         playerOneDetail.save()
-                        return Response({'message': "You win"})
+
+                        winner_match = MatchResult.objects.create(match=match, winner=user_two, loser=user_one)
+
+                        winner_match.save()
+                        return Response({'message': f"You win {playerTwoDetail.user.username}"})
                 else:
                     return Response({'message': "Out of mana"})
             else:
-                match = winner.push(playerOneDetail.user.username)
-                return Response({"message": f"You where defected by{playerOneDetail.user.user} try again ...."})
+                
+                winner_match = MatchResult.objects.create(match=match, winner=user_one, loser=user_two)
+
+                # winner_match.winning_cards.set(cards.id)
+                winner_match.save()
+                return Response({"message": f"You where defected by{playerOneDetail.user.username} try again ...."})
         else:
             return Response({'status': 'error', 'message': 'Invalid user'}, status=400)
     else:
-        print(winner)
+        pass
     
     
 
@@ -414,3 +433,4 @@ def trigger_card_event(request):
      'player_mana': playerOneDetail.mana, 'player_two_mana': playerTwoDetail.mana, 'card':serializer.data})
 
 
+# TODO clean the game logic more and edit the frontend with this update

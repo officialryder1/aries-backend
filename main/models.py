@@ -55,8 +55,8 @@ class Player(models.Model):
     character = models.ForeignKey(Character, on_delete=models.CASCADE)
     card = models.ManyToManyField(Card, related_name='player_cards', blank=True)
 
-    hp = models.PositiveIntegerField(default=100)
-    mana = models.PositiveIntegerField(default=100)
+    hp = models.IntegerField(default=100)
+    mana = models.IntegerField(default=100)
 
     def __str__(self):
         return str(self.user)
