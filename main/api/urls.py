@@ -38,5 +38,8 @@ urlpatterns = [
     path('match/<int:pk>', views.matchDetail, name='matchDetail'),
     path('game/match_status/', views.match_status, name="match_status"),
     path('game/pending_matches/', views.pending_matches, name='pending_matches'),
-    path('trigger_card', views.trigger_card_event)
+    path('trigger_card', views.trigger_card_event),
+    path('match_result', views.match_result),
+    path('pick_card/<int:match_id>', views.pick_loser_card),
+    path('player_rank', views.get_player_rank)
 ]

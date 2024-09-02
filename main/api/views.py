@@ -25,13 +25,30 @@ from django.views.decorators.http import require_GET
 @api_view(['GET'])
 def getRoutes(request):
     routes = [
-        '/api/token',
-        '/api/token/refresh'
-        '/api/register',
-        '/api/notes',
-        '/api/create_note',
-        '/api/user/${int}',
-        '/api/delete/${int}'
+        '/api/token: POST',
+        '/api/token/refresh: POST',
+        '/api/register: POST',
+        '/api/notes: GET',
+        '/api/create_note: POST',
+        '/api/user/${int}: GET',
+        '/api/delete/${int}: DELETE',
+        'api/cards: POST, GET',
+        'api/characters:GET',
+        'api/create_avatar: POST',
+        'api/get_player: GET',
+        'api/get_card/<int:pk>: GET',
+        'api/update_player: POST',
+        'api/get_character/{params}: GET',
+        'api/game/match: GET',
+        'api/game/match_request: POST, GET',
+        'api/game/find_match: POST',
+        'api/game/accept_match/{params}: GET',
+        'api/game/match/{params}: GET',
+        'api/game/matchDetail: GET',
+        'api/game/match_status/: GET',
+        'api/game/pending_matches/: GET',
+        'api/trigger_card: POST',
+        'api/match_result: GET'
     ]
     return Response(routes)
 
@@ -327,110 +344,167 @@ def pending_matches(request):
 
 @api_view(['POST'])
 def trigger_card_event(request):
-    card = request.data.get('card')
-    user = request.data.get('user')
-    match = request.data.get('match')
+    card_id = request.data.get('card')
+    username = request.data.get('user')
+    match_id = request.data.get('match')
 
-    match = get_object_or_404(Match, id=match)
-    playerOne = match.player_one
-    playerTwo = match.player_two
+    match = get_object_or_404(Match, id=match_id)
+    player_one = match.player_one
+    player_two = match.player_two
 
-    playerOneDetail = get_object_or_404(Player, user=playerOne)
-    playerTwoDetail =get_object_or_404(Player, user=playerTwo)
+    player_one_detail = get_object_or_404(Player, user=player_one)
+    player_two_detail = get_object_or_404(Player, user=player_two)
 
-    user_one=get_object_or_404(User, username=playerOneDetail.user.username)
-    user_two=get_object_or_404(User, username=playerTwoDetail.user.username)
+    card = get_object_or_404(Card, id=card_id)
+    serializer = CardSerializer(card)
+    player_attack = card.attack_point
+    card_mana = card.mana_point
 
-    
-
-
-    cards = get_object_or_404(Card, id=card)
-    serializer = CardSerializer(cards)
-    player_attack = cards.attack_point
-    card_mana = cards.mana_point
-    match_started = True
-    
-
-
-
-    # logic
-    if match_started:
-        if user == playerOneDetail.user.username:
-            if playerOneDetail.hp > 0:
-                if playerOneDetail.mana > 0:
-                    if playerTwoDetail.hp > 0:
-                        playerTwoDetail.hp -= player_attack
-                        playerOneDetail.mana -= card_mana
-                        playerTwoDetail.save()
-                        playerOneDetail.save()
-                    else:
-                        playerOneDetail.mana = 100
-                        playerOneDetail.hp = 100
-                        playerOneDetail.save()
-
-                        playerTwoDetail.mana = 100
-                        playerTwoDetail.hp = 100
-                        playerTwoDetail.save()
-                        
-                        winner_match = MatchResult.objects.create(match=match, winner=user_one, losere=user_two)
-
-                        winner_match.save()
-                        return Response({'message': f"You win {playerOneDetail.user}"} )
-                else:
-                    return Response({'message': "Out of mana"})
-            else:
-                winner_match = MatchResult.objects.create(match=match, winner=user_two, loser=user_one)
-
-                winner_match.save()
-                return Response({"message": f"You where defected by{playerTwoDetail.user.user} try again ...."})
-        elif user == playerTwoDetail.user.username:
-            if playerTwoDetail.hp > 0:
-                if playerTwoDetail.mana > 0:
-                    if playerOneDetail.hp > 0:
-                        playerOneDetail.hp -= player_attack
-                        playerTwoDetail.mana -= card_mana
-                        playerTwoDetail.save()
-                        playerOneDetail.save()
-                    else:
-                        playerTwoDetail.mana = 100
-                        playerTwoDetail.hp = 100
-                        playerTwoDetail.save()
-
-                        playerOneDetail.mana = 100
-                        playerOneDetail.hp = 100
-                        playerOneDetail.save()
-
-                        winner_match = MatchResult.objects.create(match=match, winner=user_two, loser=user_one)
-
-                        winner_match.save()
-                        return Response({'message': f"You win {playerTwoDetail.user.username}"})
-                else:
-                    return Response({'message': "Out of mana"})
-            else:
-                
-                winner_match = MatchResult.objects.create(match=match, winner=user_one, loser=user_two)
-
-                # winner_match.winning_cards.set(cards.id)
-                winner_match.save()
-                return Response({"message": f"You where defected by{playerOneDetail.user.username} try again ...."})
-        else:
-            return Response({'status': 'error', 'message': 'Invalid user'}, status=400)
+    if username == player_one.username:
+        opponent = player_two_detail
+        player = player_one_detail
+    elif username == player_two.username:
+        opponent = player_one_detail
+        player = player_two_detail
     else:
-        pass
-    
-    
+        return Response({'status': 'error', 'message': 'Invalid user'}, status=400)
 
-    pusher_client.trigger('match-channel', 'get-card', {
-        'card': serializer.data,
+    if player.hp > 0:
+        if player.mana >= card_mana:
+            if opponent.hp > 0:
+                opponent.hp -= player_attack
+                player.mana -= card_mana
+                opponent.save()
+                player.save()
+
+                # Real-time update via Pusher
+                pusher_client.trigger('match-channel', 'get-card', {
+                    'card': serializer.data,
+                    'user': username,
+                    'player_one_health': player_one_detail.hp,
+                    'player_two_health': player_two_detail.hp,
+                    'player_one_mana': player_one_detail.mana,
+                    'player_two_mana': player_two_detail.mana
+                })
+
+                if opponent.hp <= 0:
+                    winner = player.user
+                    loser = opponent.user
+                    match_result = MatchResult.objects.create(match=match, winner=winner, loser=loser)
+                    match_result.winning_cards.set([card])
+                    match_result.save()
+                    return Response({'message': 'You won the match', 'winner': winner.username})
+            else:
+                return Response({'message': 'Opponent has already been defeated'})
+        else:
+            return Response({'message': 'Out of mana'})
+    else:
+        return Response({'message': 'You have been defeated'})
+
+    return Response({'status': 'success'})
+
+@api_view(['POST', 'GET'])
+def match_result(request):
+    user = request.data.get('user')
+    match_id = request.data.get('match')
+
+    match = get_object_or_404(Match, id=match_id)
+    match_result = get_object_or_404(MatchResult, match=match)
+    
+    # * retrieve match details
+    winner = match_result.winner
+    loser = match_result.loser
+    winning_card = match_result.winning_cards.all()
+
+    # Logic for claiming loser card
+    player = get_object_or_404(Player, user=loser)
+    loser_cards = player.card.all()
+
+    card_serializer = CardSerializer(loser_cards, many=True)
+  
+
+    # Serialize the winner, loser, and winning cards
+    winner_serializer = UserSerializer(winner)
+    loser_serializer = UserSerializer(loser)
+    winning_card_serializer = CardSerializer(winning_card, many=True)
+
+    # Compare the username provided in the request with the winner's username
+    if user == winner.username:
+        message = "You won the match"
+    else:
+        player.hp = 100
+        player.mana = 100
+        player.save()
+        message = " You lost the match"
+
+    return Response({
+            'message': message, 
+            'winner': winner_serializer.data, 
+            'loser': loser_serializer.data, 
+            'winning_card': winning_card_serializer.data,
+            'loser_card': card_serializer.data
+        })
+
+@api_view(['POST'])
+def pick_loser_card(request, match_id):
+    card_id = request.data.get('card_id')
+    match = get_object_or_404(Match, id=match_id)
+    match_result = get_object_or_404(MatchResult, match=match)
+    winner = match_result.winner
+
+    loser_player = get_object_or_404(Player, user=match_result.loser)
+    winner_player = get_object_or_404(Player, user=winner)
+
+    # Transfer card to teh winner
+    card = get_object_or_404(Card, id=card_id)
+   
+    loser_player.card.remove(card)
+    winner_player.card.add(card)
+    winner_player.mana += card.mana_point
+    winner_player.hp += card.attack_point
+    winner_player.save()
+
+    return Response({'message': 'Card successfully transferred to winner'})
+
+@api_view(['GET'])
+def get_player_rank(request):
+    user = request.GET.get('user')
+
+
+    player = get_object_or_404(Player, user=user)
+    player_cards = player.card.all()
+    
+   # Initialize total points
+    total_cards_points = 0
+    rank = ''
+    time_interval = 0
+
+    # Loop through each card to sum the points
+    for card in player_cards:
+        total_cards_points += card.card_point or 0
+        # total_mana_points += card.mana_point or 0
+        if total_cards_points <= 500:
+            rank = 'D'
+            time_interval = 15
+        elif total_cards_points <= 500 and total_cards_points < 200:
+            rank = 'C'
+            time_interval = 11
+        elif total_cards_points <= 700 and total_cards_points > 500:
+            rank = 'B'
+            time_interval = 9
+        elif total_cards_points <=1500 and total_cards_points > 700:
+            rank = 'A'
+            time_interval = 7
+        elif total_cards_points > 1500:
+            rank = 'S'
+            time_interval = 5
+
+    # Return the total points along with the rank or any other info you need
+    return Response({
         'user': user,
-        'player_one_health': playerOneDetail.hp,
-        'player_two_health':playerTwoDetail.hp,
-        'player_one_mana': playerOneDetail.mana,
-        'player_two_mana': playerTwoDetail.mana
+        'total_attack_points': total_cards_points,
+        'rank': rank,
+        'time_interval': time_interval
+       
     })
-    return Response({'status': 'success', 'player_two_health':playerTwoDetail.hp,
-     'player_one':playerOneDetail.hp, 
-     'player_one_mana': playerOneDetail.mana, 'player_two_mana': playerTwoDetail.mana, 'card':serializer.data})
 
-
-# TODO clean the game logic more and edit the frontend with this update
