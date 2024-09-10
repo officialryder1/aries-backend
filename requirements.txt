@@ -1,5 +1,7 @@
 asgiref==3.8.1
 async-timeout==4.0.3
+boto3==1.35.16
+botocore==1.35.16
 certifi==2024.7.4
 cffi==1.17.0
 charset-normalizer==3.3.2
@@ -12,6 +14,7 @@ djangorestframework==3.15.2
 djangorestframework-simplejwt==5.3.1
 gunicorn==23.0.0
 idna==3.7
+jmespath==1.0.1
 ndg-httpsclient==0.5.1
 packaging==24.1
 pillow==10.4.0
@@ -22,9 +25,11 @@ pycparser==2.22
 PyJWT==2.8.0
 PyNaCl==1.5.0
 pyOpenSSL==24.2.1
+python-dateutil==2.9.0.post0
 python-decouple==3.8
 redis==5.0.8
 requests==2.32.3
+s3transfer==0.10.2
 six==1.16.0
 sqlparse==0.5.1
 typing_extensions==4.12.2
