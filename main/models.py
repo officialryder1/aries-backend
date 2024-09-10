@@ -35,6 +35,7 @@ class Card(models.Model):
     card_type = models.ForeignKey(Character, on_delete=models.CASCADE)
     attack_point = models.PositiveIntegerField(default=0)
     defense_point = models.PositiveIntegerField(default=0)
+    can_nullify = models.BooleanField(default=False, blank= True, null=True)
 
     rarity = models.ForeignKey(Rarity, on_delete=models.CASCADE)
     mana_point = models.PositiveIntegerField(blank=True, null=True)

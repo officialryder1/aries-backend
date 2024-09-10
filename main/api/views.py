@@ -4,7 +4,8 @@ from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.db.models import Q
-from django.views.decorators.http import require_POST
+from django.core.cache import cache
+
 
 # third parties
 from .pusher import pusher_client
@@ -87,10 +88,17 @@ def check_user_exists(request):
 def getUser(request, pk):
     try:
         user = User.objects.get(pk=pk)
+
+        cache_key = f"user_{user}"
+
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
     
     serializer = UserSerializer(user)
+    cache.set(cache_key, serializer.data, timeout=300)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
@@ -131,7 +139,7 @@ def delete_note(request, pk):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 @api_view(["POST"])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def create_avatar(request):
     serializer = PlayerSerializer(data=request.data)
     # user = request.user
@@ -144,21 +152,45 @@ def create_avatar(request):
 @api_view(['POST', 'GET'])
 def character(request):
     if request.method == 'GET':
+        cache_key = "all_characters"
+
+        cached_characters = cache.get(cache_key)
+
+        if cached_characters:
+            print("serving from cache")
+            return Response(cached_characters)
+        
         character = Character.objects.all()
         serializer = CharacterSerializer(character, many=True)
+        print("serving from db")
+        cache.set(cache_key, serializer.data, timeout=60*5)
         return Response(serializer.data)
 
 # get all the cards and listen for a post event to add card
 @api_view(['POST', 'GET'])
 def card(request):
     if request.method == 'GET':
+        cache_key = "all_cards"
+
+        cached_cards = cache.get(cache_key)
+
+        if cached_cards:
+            print("serving from cache")
+            return Response(cached_cards)
+        
+        # if no cache, fetch from the database
         card = Card.objects.all()
         serializer = CardSerializer(card, many=True)
+
+        print("serving ftom db")
+        cache.set(cache_key, serializer.data, timeout=60*5)
         return Response(serializer.data)
     if request.method == 'POST':
         serializer = CardSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+
+            cache.delete("all_cards")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -171,6 +203,13 @@ def get_player(request):
 
     if not user_id:
         return Response({'error': 'User ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    cached_key = f"user_{user_id}_players"
+
+    cached_data = cache.get(cached_key)
+    if cached_data:
+        print("serving from cache")
+        return Response(cached_data, status=status.HTTP_200_OK)
 
     try:
         user = User.objects.get(pk=user_id)  # Fetch the user object by ID
@@ -179,7 +218,8 @@ def get_player(request):
 
     players = Player.objects.filter(user=user)  # Filter players by the user
     serializer = PlayerSerializer(players, many=True)
-
+    print("serving from db")
+    cache.set(cached_key, serializer.data, timeout=300)
 
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -188,16 +228,27 @@ def get_player(request):
 @api_view(['GET'])
 def get_card(request, pk ):
     try:
+        cached_key = "get_card"
+
+        cached_card = cache.get(cached_key)
+
+        if cached_card:
+            print("serving from cache")
+            return Response(cached_card)
+        
         card = Card.objects.get(pk=pk)
         serializer = CardSerializer(card)
         
+        cache.set(cached_key, serializer.data, timeout=60*5)
         return Response(serializer.data)
     except Card.DoesNotExist:
         return Response({'error': "Card not found"}, status=status.HTTP_404_NOT_FOUND)
     
 @api_view(['POST'])
+
 def update_player_card(request):
     user = request.GET.get('user_id')
+    
     try:
         player = Player.objects.get(user=user)
     except Player.DoesNotExist:
@@ -212,13 +263,23 @@ def update_player_card(request):
     player.save()
 
     serializer = PlayerSerializer(player)
+   
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 def get_character(request, pk):
     try:
+        cache_key = "get_character"
+
+        cached_data = cache.get(cache_key)
+
+        if cached_data:
+            return Response(cached_data, status=status.HTTP_200_OK)
+        
         character = Character.objects.get(pk=pk)
         serializer = CharacterSerializer(character)
+        
+        cache.set(cache_key, serializer.data, timeout=300)
         return Response(serializer.data)
     except Character.DoesNotExist:
         return Response({"error": "Character not found"}, status=status.HTTP_400_BAD_REQUEST)
@@ -228,7 +289,14 @@ def get_character(request, pk):
 def match(request):
     if request.method == 'GET':
         match = Match.objects.all()
+        cache_key = f"Match_{match}"
+        cached_data = cache.get(cache_key)
+
+        if cached_data:
+            return Response(cached_data, status=status.HTTP_200_OK)
+        
         serializer = MatchSerializer(match, many=True)
+        cache.set(cache_key, serializer.data, timeout=60)
         return Response(serializer.data)
     if request.method == 'POST':
         pass
@@ -236,6 +304,7 @@ def match(request):
 @api_view(['GET', 'POST'])
 def requestMatch(request):
     user = request.GET.get('user_id')
+
     user_id = User.objects.get(pk=user)
     match_request = MatchRequest.objects.create(requester=user_id)
 
@@ -250,10 +319,16 @@ def requestMatch(request):
 def FindMatch(request):
     user = request.GET.get('user_id')
 
+    cache_key = f"user_{user}"
+
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return Response(cached_data, status=status.HTTP_200_OK)
     
     match_request = MatchRequest.objects.filter(status='pending').exclude(requestee=user)
     serializer = MatchRequestSerializer(match_request, many=True)
     
+    cache.set(cache_key, serializer.data, timeout=60)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET', 'POST'])
@@ -294,8 +369,14 @@ def AcceptMatch(request, pk):
 @api_view(['GET'])
 def matchDetail(request, pk):
     match = get_object_or_404(Match, pk=pk)
-    
+    cache_key = f"match_{match}"
+    cache_data = cache.get(cache_key)
+
+    if cache_data:
+        print("served from cache")
+        return Response(cache_data, status=status.HTTP_200_OK)
     serializer = MatchSerializer(match)
+    cache.set(cache_key, serializer.data, timeout=60*2)
 
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -352,12 +433,29 @@ def trigger_card_event(request):
     player_one = match.player_one
     player_two = match.player_two
 
-    player_one_detail = get_object_or_404(Player, user=player_one)
-    player_two_detail = get_object_or_404(Player, user=player_two)
+    # UseRedis to cache the match nd plyers
+    player_one_cache_key = f"player_{player_one.id}_details"
+    player_two_cache_key = f"player_{player_two.id}_details"
+
+    player_one_detail = cache.get(player_one_cache_key)
+    player_two_detail = cache.get(player_two_cache_key)
+    
+
+    if not player_one_detail:
+        player_one_detail = get_object_or_404(Player, user=player_one)
+        # Cache the player detail
+        cache.set(player_one_cache_key, player_one_detail, timeout=60*5)
+        print("Data has been cache")
+    if not player_two_detail:
+        player_two_detail = get_object_or_404(Player, user=player_two)
+        # Cache the player details
+        cache.set(player_two_cache_key, player_two_detail, timeout=60*5)  # Cache for 5 minutes
+        print("Data has been cache")
 
     card = get_object_or_404(Card, id=card_id)
     serializer = CardSerializer(card)
     player_attack = card.attack_point
+    player_defense = card.defense_point
     card_mana = card.mana_point
 
     if username == player_one.username:
@@ -374,6 +472,13 @@ def trigger_card_event(request):
             if opponent.hp > 0:
                 opponent.hp -= player_attack
                 player.mana -= card_mana
+                player.hp += player_defense
+
+                # Save player states in redis
+                cache.set(player_one_cache_key, player_one_detail, timeout=60*5)
+                cache.set(player_two_cache_key, player_two_detail, timeout=60*5)
+
+                # Save the changes to the database
                 opponent.save()
                 player.save()
 
@@ -393,6 +498,10 @@ def trigger_card_event(request):
                     match_result = MatchResult.objects.create(match=match, winner=winner, loser=loser)
                     match_result.winning_cards.set([card])
                     match_result.save()
+
+                     # Invalidate the cache after the match is over
+                    cache.delete(player_one_cache_key)
+                    cache.delete(player_two_cache_key)
                     return Response({'message': 'You won the match', 'winner': winner.username})
             else:
                 return Response({'message': 'Opponent has already been defeated'})
@@ -408,6 +517,12 @@ def match_result(request):
     user = request.data.get('user')
     match_id = request.data.get('match')
 
+    cache_key = f"match_result_{match_id}"
+    cached_data = cache.get(cache_key)
+
+    if cached_data:
+        return Response(cached_data)
+   # Initialize total points
     match = get_object_or_404(Match, id=match_id)
     match_result = get_object_or_404(MatchResult, match=match)
     
@@ -437,6 +552,15 @@ def match_result(request):
         player.save()
         message = " You lost the match"
 
+    result_data = {
+        'message': message,
+        "winner": winner_serializer.data,
+        "loser": loser_serializer.data,
+        'winning_card': winning_card_serializer.data,
+        'loser_card': card_serializer.data
+    }
+
+    cache.set(cache_key, result_data, timeout=600)
     return Response({
             'message': message, 
             'winner': winner_serializer.data, 
@@ -470,11 +594,15 @@ def pick_loser_card(request, match_id):
 def get_player_rank(request):
     user = request.GET.get('user')
 
+    cache_key = f"player_rank_{user}"
+    cached_rank = cache.get(cache_key)
 
+    if cached_rank:
+        return Response(cached_rank)
     player = get_object_or_404(Player, user=user)
     player_cards = player.card.all()
     
-   # Initialize total points
+    
     total_cards_points = 0
     rank = ''
     time_interval = 0
@@ -499,6 +627,16 @@ def get_player_rank(request):
             rank = 'S'
             time_interval = 5
 
+        result_data = {
+        'user': user,
+        'total_attack_points': total_cards_points,
+        'rank': rank,
+        'time_interval': time_interval
+        }
+
+        # Cache the result for 5 minutes (300 seconds)
+        cache.set(cache_key, result_data, timeout=300)
+
     # Return the total points along with the rank or any other info you need
     return Response({
         'user': user,
@@ -508,3 +646,55 @@ def get_player_rank(request):
        
     })
 
+# * implement game mechanics and logic for cards effect like a card that can null an attack and a full counter logic
+
+@api_view(['GET', 'POST'])
+def full_counter(request):
+    user = request.data.get('user')
+    card = request.data.get('card')
+    opponent_card = request.data.get('opponent_card')
+    opponent = request.data.get('opponent')
+
+    player_one = get_object_or_404(Player, user__username=user)
+    player_two= get_object_or_404(Player, user=opponent_card)
+
+    playerOneCard = get_object_or_404(Card, id=card)
+    playerTwoCard = get_object_or_404(Card, id=opponent)
+
+    if playerOneCard.can_nullify:
+        playerTwoCard = None
+
+        return Response({"message": "Attack was nullified"})
+    else:
+        playerOneCard = None
+        return Response({"message": "OOps"})
+    
+# # Redis Store
+# def store_player_health(player_id, health):
+#     cache_key = f"player_health_{player_id}"
+#     cache.set(cache_key, health, timeout=60*5)
+
+# def get_player_health(player_id):
+#     cache_key = f"player_health_{player_id}"
+#     return cache.get(cache_key)
+
+# #Store match status
+# def store_match_status(match_id, status):
+#     cache_key = f"match_status_{match_id}"
+#     cache.set(cache_key, status, timeout=60*10)  # Cache for 10 minutes
+
+# # Get match status
+# def get_match_status(match_id):
+#     cache_key = f"match_status_{match_id}"
+#     return cache.get(cache_key)
+
+# # # Usage in a view:
+# # @api_view(['GET'])
+# # def match_status(request, match_id):
+#     match_status = get_match_status(match_id)
+#     if not match_status:
+#         match = Match.objects.get(id=match_id)
+#         match_status = match.status
+#         store_match_status(match_id, match_status)
+
+#     return Response({"status": match_status})
