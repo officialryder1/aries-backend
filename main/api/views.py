@@ -248,6 +248,10 @@ def get_card(request, pk ):
 
 def update_player_card(request):
     user = request.GET.get('user_id')
+
+    # Logging the incoming data for debugging
+    print("Incoming user_id:", user)
+    print("Incoming card data:", request.data)
     
     try:
         player = Player.objects.get(user=user)
@@ -258,7 +262,13 @@ def update_player_card(request):
     if not cards:
         return Response({"error": "No cards provided"}, status=status.HTTP_400_BAD_REQUEST)
     
-    card_objects = Card.objects.filter(id__in=cards)
+    # Ensure there are no duplicate
+    unique_cards = list(set(cards))
+    if len(unique_cards) != len(cards):
+        return Response({"error": "Duplicate cards found"}, status=status.HTTP_400_BAD_REQUEST)
+
+    
+    card_objects = Card.objects.filter(id__in=unique_cards)
     player.card.set(card_objects)
     player.save()
 
