@@ -656,6 +656,8 @@ def get_player_rank(request):
        
     })
 
+
+  
 # * implement game mechanics and logic for cards effect like a card that can null an attack and a full counter logic
 
 @api_view(['GET', 'POST'])
@@ -677,34 +679,4 @@ def full_counter(request):
         return Response({"message": "Attack was nullified"})
     else:
         playerOneCard = None
-        return Response({"message": "OOps"})
-    
-# # Redis Store
-# def store_player_health(player_id, health):
-#     cache_key = f"player_health_{player_id}"
-#     cache.set(cache_key, health, timeout=60*5)
-
-# def get_player_health(player_id):
-#     cache_key = f"player_health_{player_id}"
-#     return cache.get(cache_key)
-
-# #Store match status
-# def store_match_status(match_id, status):
-#     cache_key = f"match_status_{match_id}"
-#     cache.set(cache_key, status, timeout=60*10)  # Cache for 10 minutes
-
-# # Get match status
-# def get_match_status(match_id):
-#     cache_key = f"match_status_{match_id}"
-#     return cache.get(cache_key)
-
-# # # Usage in a view:
-# # @api_view(['GET'])
-# # def match_status(request, match_id):
-#     match_status = get_match_status(match_id)
-#     if not match_status:
-#         match = Match.objects.get(id=match_id)
-#         match_status = match.status
-#         store_match_status(match_id, match_status)
-
-#     return Response({"status": match_status})
+ 
