@@ -285,7 +285,7 @@ def get_profile(request):
     except Player.DoesNotExist:
         return Response({"error": "Player not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    player_cards = player.card
+    player_cards = player.card.all()
     cards_data = [{
         'id': card.id,
         'name': card.name,
