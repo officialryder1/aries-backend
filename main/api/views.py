@@ -302,7 +302,13 @@ def get_profile(request):
             'rarity': card.rarity,
             'mana_point': card.mana_point
         }
-
+        # Ensure all fields are JSON serializable
+        for key, value in card_data.items():
+            if isinstance(value, (str, int, float, bool, type(None))):
+                continue
+            else:
+                card_data[key] = str(value)
+        
         cards_data.append(card_data)
     
     return Response({'cards': cards_data}, status=status.HTTP_200_OK)
