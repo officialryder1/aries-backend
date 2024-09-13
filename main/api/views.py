@@ -300,9 +300,10 @@ def get_profile(request):
         'mana_point': card.mana_point
 
     } for card in player_cards]
-    serializer = PlayerSerializer({'cards': cards_data}, status=status.HTTP_200_OK)
+    
+    return Response({'cards': cards_data}, status=status.HTTP_200_OK)
 
-    return Response(serializer.data)
+    
 @api_view(['GET'])
 def get_character(request, pk):
     try:
