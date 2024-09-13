@@ -42,5 +42,6 @@ urlpatterns = [
     path('match_result', views.match_result),
     path('pick_card/<int:match_id>', views.pick_loser_card),
     path('player_rank', views.get_player_rank),
-    path('counter', views.full_counter)
+    path('counter', views.full_counter),
+    path('player_card', views.get_profile)
 ]
