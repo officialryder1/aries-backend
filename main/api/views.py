@@ -277,6 +277,33 @@ def update_player_card(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
+def get_profile(request):
+    user = request.GET.get('user')
+
+    try:
+        player = Player.objects.get(user=user)
+    except Player.DoesNotExist:
+        return Response({"error": "Player not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    player_cards = player.card
+    cards_data = [{
+        'id': card.id,
+        'name': card.name,
+        'description': card.description,
+        'image': card.image.url if card.image else None,
+        'card_point': card.card_point,
+        'card_type': card.card_type,
+        'attack_point': card.attack_point,
+        'defense_point': card.defense_point,
+        'can_nullify': card.can_nullify,
+        'rarity': card.rarity,
+        'mana_point': card.mana_point
+
+    } for card in player_cards]
+    serializer = PlayerSerializer({'cards': cards_data}, status=status.HTTP_200_OK)
+
+    return Response(serializer.data)
+@api_view(['GET'])
 def get_character(request, pk):
     try:
         cache_key = "get_character"
