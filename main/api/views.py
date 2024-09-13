@@ -286,20 +286,24 @@ def get_profile(request):
         return Response({"error": "Player not found"}, status=status.HTTP_404_NOT_FOUND)
 
     player_cards = player.card.all()
-    cards_data = [{
-        'id': card.id,
-        'name': card.name,
-        'description': card.description,
-        'image': card.image.url if card.image else None,
-        'card_point': card.card_point,
-        'card_type': card.card_type,
-        'attack_point': card.attack_point,
-        'defense_point': card.defense_point,
-        'can_nullify': card.can_nullify,
-        'rarity': card.rarity,
-        'mana_point': card.mana_point
 
-    } for card in player_cards]
+    cards_data = []
+    for card in player_cards:
+        card_data = {
+            'id': card.id,
+            'name': card.name,
+            'description': card.description,
+            'image': card.image.url if card.image else None,
+            'card_point': card.card_point,
+            'card_type': card.card_type,
+            'attack_point': card.attack_point,
+            'defense_point': card.defense_point,
+            'can_nullify': card.can_nullify,
+            'rarity': card.rarity,
+            'mana_point': card.mana_point
+        }
+
+        cards_data.append(card_data)
     
     return Response({'cards': cards_data}, status=status.HTTP_200_OK)
 
