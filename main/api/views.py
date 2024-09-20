@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.db.models import Q
 from django.core.cache import cache
+from django.db import transaction
 
 
 # third parties
@@ -518,39 +519,42 @@ def trigger_card_event(request):
     if player.hp > 0:
         if player.mana >= card_mana:
             if opponent.hp > 0:
-                opponent.hp -= player_attack
-                player.mana -= card_mana
-                player.hp += player_defense
+                with transaction.atomic():
+                    player.hp += player_defense
+                    opponent.hp -= player_attack
+                    player.mana -= card_mana
+                    
 
-                # Save player states in redis
-                cache.set(player_one_cache_key, player_one_detail, timeout=60*5)
-                cache.set(player_two_cache_key, player_two_detail, timeout=60*5)
+                    # Save player states in redis
+                    cache.set(player_one_cache_key, player_one_detail, timeout=60*5)
+                    cache.set(player_two_cache_key, player_two_detail, timeout=60*5)
 
-                # Save the changes to the database
-                opponent.save()
-                player.save()
+                    # Save the changes to the database
+                    player.save()
+                    opponent.save()
+                    
 
-                # Real-time update via Pusher
-                pusher_client.trigger('match-channel', 'get-card', {
-                    'card': serializer.data,
-                    'user': username,
-                    'player_one_health': player_one_detail.hp,
-                    'player_two_health': player_two_detail.hp,
-                    'player_one_mana': player_one_detail.mana,
-                    'player_two_mana': player_two_detail.mana
-                })
+                    # Real-time update via Pusher
+                    pusher_client.trigger('match-channel', 'get-card', {
+                        'card': serializer.data,
+                        'user': username,
+                        'player_one_health': player_one_detail.hp,
+                        'player_two_health': player_two_detail.hp,
+                        'player_one_mana': player_one_detail.mana,
+                        'player_two_mana': player_two_detail.mana
+                    })
 
-                if opponent.hp <= 0:
-                    winner = player.user
-                    loser = opponent.user
-                    match_result = MatchResult.objects.create(match=match, winner=winner, loser=loser)
-                    match_result.winning_cards.set([card])
-                    match_result.save()
+                    if opponent.hp <= 0:
+                        winner = player.user
+                        loser = opponent.user
+                        match_result = MatchResult.objects.create(match=match, winner=winner, loser=loser)
+                        match_result.winning_cards.set([card])
+                        match_result.save()
 
-                     # Invalidate the cache after the match is over
-                    cache.delete(player_one_cache_key)
-                    cache.delete(player_two_cache_key)
-                    return Response({'message': 'You won the match', 'winner': winner.username})
+                        # Invalidate the cache after the match is over
+                        cache.delete(player_one_cache_key)
+                        cache.delete(player_two_cache_key)
+                        return Response({'message': 'You won the match', 'winner': winner.username})
             else:
                 return Response({'message': 'Opponent has already been defeated'})
         else:
