@@ -518,6 +518,10 @@ def trigger_card_event(request):
         return Response({'status': 'error', 'message': 'Invalid user'}, status=400)
     
     player_mana = player.mana if player.mana is not None else 0
+    if player.mana is None:
+        print(f"Error: player {player.username} has no mana")
+    if card.mana_point is None:
+        print(f"Error: Card {card.id} has no mana_point")
 
     if player.hp > 0:
         if player_mana >= card_mana:

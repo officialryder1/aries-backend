@@ -38,7 +38,7 @@ class Card(models.Model):
     can_nullify = models.BooleanField(default=False, blank= True, null=True)
 
     rarity = models.ForeignKey(Rarity, on_delete=models.CASCADE)
-    mana_point = models.PositiveIntegerField(blank=True, null=True)
+    mana_point = models.PositiveIntegerField(default = 0, blank=True, null=True)
 
     def __str__(self):
         return self.name
