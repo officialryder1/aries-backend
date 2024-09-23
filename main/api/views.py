@@ -506,6 +506,7 @@ def trigger_card_event(request):
     player_attack = card.attack_point
     player_defense = card.defense_point
     card_mana = card.mana_point
+   
 
     if username == player_one.username:
         opponent = player_two_detail
@@ -515,9 +516,11 @@ def trigger_card_event(request):
         player = player_two_detail
     else:
         return Response({'status': 'error', 'message': 'Invalid user'}, status=400)
+    
+    player_mana = player.mana if player.mana is not None else 0
 
     if player.hp > 0:
-        if player.mana >= card_mana:
+        if player_mana >= card_mana:
             if opponent.hp > 0:
                 with transaction.atomic():
                     player.hp += player_defense
